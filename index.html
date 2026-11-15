@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111d32">
+<title>GIFTvision — Smart Attendance</title>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<style>
+:root{font-family:Inter,system-ui,Arial,sans-serif;color:#182338;background:#f4f6fb;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0;min-width:320px}button,input,select{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:12px 16px;font-weight:700}button:disabled{opacity:.5;cursor:not-allowed}
+.primary{background:#4568e8;color:white}.secondary{background:#edf1ff;color:#4563c5}.danger{background:#fff0ef;color:#bd514a}.muted{color:#8490a3;font-size:13px}
+header{background:#111d32;color:#fff;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:15px;position:sticky;top:0;z-index:5}
+.brand{font-size:20px;font-weight:850;letter-spacing:-.5px}.brand span{color:#91aaff}.header-right{font-size:12px;color:#b8c6df}
+nav{display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px;background:#fff;border-bottom:1px solid #e8ecf4;position:sticky;top:59px;z-index:4}
+nav button{background:transparent;color:#64728a;padding:10px 13px}nav button.active{background:#edf1ff;color:#385bd2}
+main{max-width:1200px;margin:24px auto;padding:0 18px 50px}.page{display:none}.page.active{display:block}
+h1{font-size:28px;margin:0 0 5px;letter-spacing:-.8px}h2{font-size:19px;margin:0 0 14px}h3{font-size:16px;margin:0 0 8px}
+.heading{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:#fff;border:1px solid #e7ebf3;border-radius:16px;padding:20px;box-shadow:0 4px 16px #24385b08;margin-bottom:16px}
+.stat{font-size:32px;font-weight:850;margin-top:8px}.stat-label{font-size:13px;color:#8490a3}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:grid;gap:6px}.field.full{grid-column:1/-1}label{font-size:12px;font-weight:750;color:#5e6b80}
+input,select{width:100%;border:1px solid #e1e6ef;border-radius:9px;padding:12px;background:white;color:#27354a;min-width:0}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.camera-wrap{position:relative;width:100%;height:min(65vh,620px);min-height:350px;background:#101a2a;border-radius:14px;overflow:hidden}
+.camera-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.camera-wrap.back video,.camera-wrap.external video{transform:none}
+.face-box{position:absolute;border:3px solid #19e58b;border-radius:13px;box-shadow:0 0 18px #19e58b88,inset 0 0 12px #19e58220;pointer-events:none;z-index:2}
+.face-label{position:absolute;top:-34px;left:-3px;background:#0b9e61;color:white;border-radius:7px 7px 7px 0;padding:7px 10px;font-size:12px;font-weight:800;white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis}
+.camera-empty{height:100%;display:grid;place-content:center;text-align:center;color:#b9c5d8;gap:8px;padding:20px}
+.pill{display:inline-block;border-radius:20px;padding:7px 11px;background:#eef3ff;color:#4262ca;font-size:12px;font-weight:750}
+.consent{display:flex;gap:9px;align-items:flex-start;margin:18px 0;font-size:13px;color:#59677d;line-height:1.5}.consent input{width:auto;margin-top:3px}
+table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:left;padding:12px;border-bottom:1px solid #edf0f5;font-size:13px}th{font-size:11px;color:#8591a4;text-transform:uppercase;letter-spacing:.5px}.table-scroll{overflow:auto}
+.notice{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#17263d;color:#fff;padding:13px 18px;border-radius:12px;z-index:20;box-shadow:0 8px 28px #0003;max-width:92vw}
+.login{max-width:440px;margin:8vh auto}.small{font-size:11px;color:#8995a7;line-height:1.55}.success{color:#12875a}.warning{background:#fff8e8;border:1px solid #f1e4c5;color:#896b35;border-radius:10px;padding:12px;font-size:12px;line-height:1.5;margin-top:12px}
+@media(max-width:760px){header{padding:14px 16px}.header-right{display:none}nav{top:54px;overflow:auto;flex-wrap:nowrap}nav button{white-space:nowrap}.grid{grid-template-columns:1fr}.heading{align-items:flex-start;flex-direction:column}main{padding:0 12px 35px}.card{padding:16px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.camera-wrap{height:58vh;min-height:360px}.stat{font-size:28px}}
+</style>
+</head>
+<body>
+<header><div class="brand">◉ GIFT<span>vision</span></div><div class="header-right" id="modelState">Loading face recognition…</div></header>
+<nav id="nav" hidden>
+<button class="active" data-page="dashboard">Overview</button><button data-page="enroll">Enroll student</button><button data-page="attendance">Live attendance</button><button data-page="students">Students</button><button data-page="history">Attendance log</button><button id="logout" style="margin-left:auto">Sign out</button>
+</nav>
+<main>
+<section id="auth" class="page active">
+<div class="card login">
+<h1>Welcome to GIFTvision</h1><p class="muted">Create a local teacher workspace or sign in on this browser.</p>
+<div id="setupFields">
+<div class="field"><label>Username</label><input id="newUser" autocomplete="username" placeholder="At least 3 characters"></div>
+<div class="field" style="margin-top:12px"><label>Password</label><input id="newPass" type="password" autocomplete="new-password" placeholder="At least 6 characters"></div>
+<button class="primary" style="width:100%;margin-top:16px" id="createAccount">Create workspace</button>
+</div>
+<div id="loginFields" hidden>
+<div class="field"><label>Username</label><input id="user" autocomplete="username"></div>
+<div class="field" style="margin-top:12px"><label>Password</label><input id="pass" type="password" autocomplete="current-password"></div>
+<button class="primary" style="width:100%;margin-top:16px" id="signIn">Sign in</button>
+</div>
+<div class="warning">This starter app stores its account, student descriptors and attendance in this browser only. It is not secure server authentication and does not synchronize between devices.</div>
+</div>
+</section>
+
+<section id="dashboard" class="page">
+<div class="heading"><div><h1>Classroom overview</h1><div class="muted">Your attendance workspace at a glance.</div></div><button class="primary" data-go="attendance">Start attendance</button></div>
+<div class="grid">
+<div class="card"><div class="stat-label">Enrolled students</div><div class="stat" id="statStudents">0</div></div>
+<div class="card"><div class="stat-label">Present today</div><div class="stat" id="statPresent">0</div></div>
+<div class="card"><div class="stat-label">Attendance rate</div><div class="stat" id="statRate">0%</div></div>
+</div>
+<div class="card"><h2>Recent attendance</h2><div id="recent" class="muted">No attendance records yet.</div></div>
+<div class="card"><h2>Privacy and consent</h2><p class="muted">Face recognition runs in your browser. Students must be informed and agree before enrollment. Offer a non-biometric attendance alternative. Delete student records when they are no longer needed.</p></div>
+</section>
+
+<section id="enroll" class="page">
+<div class="heading"><div><h1>Enroll a student</h1><div class="muted">Enter student details and capture three face samples.</div></div></div>
+<div class="card">
+<h2>01 · Student information</h2>
+<div class="form-grid">
+<div class="field"><label>Full name</label><input id="studentName" placeholder="Student full name"></div>
+<div class="field"><label>Roll number</label><input id="studentRoll" placeholder="Roll number"></div>
+<div class="field full"><label>Department / class</label><input id="studentDept" placeholder="Department or class"></div>
+<div class="field"><label>Semester</label><select id="semester"><option value="">Select semester</option><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div>
+</div>
+<h2 style="margin-top:28px">02 · Face enrollment</h2>
+<div class="field" style="max-width:300px;margin-bottom:12px"><label>Camera</label><select id="enrollCamera"><option value="user">Front camera</option><option value="environment">Back camera</option><option value="external">External / selected camera</option></select></div>
+<div class="camera-wrap" id="enrollFrame"><div class="camera-empty" id="enrollEmpty">📷<strong>Camera preview</strong><span>Start the camera to capture face samples</span></div><video id="enrollVideo" autoplay muted playsinline hidden></video><div id="enrollBox" class="face-box" hidden></div><span class="pill" style="position:absolute;right:12px;top:12px" id="sampleCount">0/3 samples</span></div>
+<div class="actions"><button class="secondary" id="startEnroll">Start camera</button><button class="primary" id="capture" disabled>Capture sample</button><button class="danger" id="stopEnroll" disabled>Stop camera</button><button class="secondary" id="clearSamples">Clear samples</button></div>
+<label class="consent"><input id="consent" type="checkbox"><span>I confirm that the student has been informed and has freely agreed to face-based attendance. A non-biometric alternative is available.</span></label>
+<button class="primary" id="saveStudent" style="width:100%">Save student enrollment</button>
+</div>
+</section>
+
+<section id="attendance" class="page">
+<div class="heading"><div><h1>Live attendance</h1><div class="muted">Create a session, then scan enrolled students.</div></div></div>
+<div class="card">
+<div class="form-grid">
+<div class="field"><label>Session name (required)</label><input id="sessionName" placeholder="e.g. Applied Chemistry — Lecture 04"></div>
+<div class="field"><label>Camera</label><select id="scanCamera"><option value="user">Front camera</option><option value="environment">Back camera</option><option value="external">External / selected camera</option></select></div>
+</div>
+<div class="actions"><button class="secondary" id="setSession">Set active session</button><span class="pill" id="activeSession">No active session</span></div>
+<div class="camera-wrap" id="scanFrame" style="margin-top:16px"><div class="camera-empty" id="scanEmpty">◉<strong>Attendance camera</strong><span>Set a session and start the camera</span></div><video id="scanVideo" autoplay muted playsinline hidden></video><div id="scanBox" class="face-box" hidden></div></div>
+<div class="actions"><button class="primary" id="startScan">Start attendance camera</button><button class="danger" id="stopScan" disabled>Stop camera</button></div>
+<p class="muted" id="scanStatus">No active scan.</p>
+</div>
+<div class="card">
+<h2>ESP32 connection (optional)</h2>
+<div class="form-grid"><div class="field"><label>ESP32 base URL</label><input id="espUrl" value="http://192.168.4.1" placeholder="http://192.168.4.1"></div><div class="field"><label>Connection</label><div class="actions" style="margin:0"><button class="secondary" id="espConnect">Test connection</button><span class="muted" id="espStatus">Not connected</span></div></div></div>
+<p class="small">The ESP32 firmware must provide a GET /status endpoint and allow browser CORS. This is a connection test only; it does not flash firmware or perform face recognition on the ESP32.</p>
+</div>
+</section>
+
+<section id="students" class="page">
+<div class="heading"><div><h1>Students</h1><div class="muted">Enrolled student directory.</div></div><button class="primary" data-go="enroll">Enroll student</button></div>
+<div class="card"><input id="studentSearch" placeholder="Search name, roll, department or semester"><div class="table-scroll" style="margin-top:14px"><table><thead><tr><th>Name</th><th>Roll</th><th>Department</th><th>Semester</th><th>Samples</th><th></th></tr></thead><tbody id="studentRows"></tbody></table></div></div>
+</section>
+
+<section id="history" class="page">
+<div class="heading"><div><h1>Attendance log</h1><div class="muted">Search and export attendance records.</div></div><button class="primary" id="exportCsv">Export CSV</button></div>
+<div class="card"><input id="historySearch" placeholder="Search student, roll, session or semester"><div class="table-scroll" style="margin-top:14px"><table><thead><tr><th>Name</th><th>Roll</th><th>Semester</th><th>Session</th><th>Date</th><th>Time</th><th>Method</th></tr></thead><tbody id="historyRows"></tbody></table></div></div>
+</section>
+</main>
+<div id="toast" class="notice" hidden></div>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const keys={students:'giftvision_students_v1',records:'giftvision_attendance_v1',account:'giftvision_account_v1'};
+const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
+let students=read(keys.students,[]),records=read(keys.records,[]),account=read(keys.account,null),samples=[];
+let enrollStream=null,scanStream=null,activeSession='',scanLoop=null,enrollLoop=null,modelReady=false,lastMarked={};
+const today=()=>new Date().toLocaleDateString('en-CA');
+const save=()=>{localStorage.setItem(keys.students,JSON.stringify(students));localStorage.setItem(keys.records,JSON.stringify(records));};
+function toast(msg){$('toast').textContent=msg;$('toast').hidden=false;setTimeout(()=>$('toast').hidden=true,3600)}
+function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===page));document.querySelectorAll('nav [data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));if(page!=='enroll')stopEnroll();if(page!=='attendance')stopScan();if(page==='dashboard')renderDashboard();if(page==='students')renderStudents();if(page==='history')renderHistory();}
+document.querySelectorAll('nav [data-page]').forEach(b=>b.onclick=()=>go(b.dataset.page));
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+function authUI(){ $('nav').hidden=!account; $('setupFields').hidden=!!account; $('loginFields').hidden=!account; if(account){$('auth').classList.add('active');document.querySelectorAll('.page:not(#auth)').forEach(x=>x.classList.remove('active'));} }
+$('createAccount').onclick=()=>{const u=$('newUser').value.trim(),p=$('newPass').value;if(u.length<3||p.length<6)return toast('Use a 3+ character username and 6+ character password.');account={u,p};localStorage.setItem(keys.account,JSON.stringify(account));authUI();go('dashboard')};
+$('signIn').onclick=()=>{if($('user').value===account.u&&$('pass').value===account.p)go('dashboard');else toast('Incorrect username or password.')};
+$('logout').onclick=()=>{stopEnroll();stopScan();document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('auth').classList.add('active')};
+authUI();
+function renderDashboard(){const present=records.filter(r=>r.date===today());$('statStudents').textContent=students.length;$('statPresent').textContent=present.length;$('statRate').textContent=(students.length?Math.round(present.length/students.length*100):0)+'%';$('recent').innerHTML=records.slice(0,6).map(r=>`<p><b>${esc(r.name)}</b> · ${esc(r.roll)} · ${esc(r.session)} · ${esc(r.time)}</p>`).join('')||'No attendance records yet.'}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderStudents(){const q=$('studentSearch').value.toLowerCase();$('studentRows').innerHTML=students.filter(s=>(s.name+' '+s.roll+' '+s.department+' '+s.semester).toLowerCase().includes(q)).map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.roll)}</td><td>${esc(s.department)}</td><td>${esc(s.semester)}</td><td>${s.descriptors.length}</td><td><button class="danger" data-delete="${s.id}">Delete</button></td></tr>`).join('')||'<tr><td colspan="6">No students enrolled.</td></tr>';document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>{const s=students.find(x=>x.id===b.dataset.delete);if(s&&confirm(`Delete ${s.name} and their face descriptors?`)){students=students.filter(x=>x.id!==s.id);save();renderStudents()}})}
+function renderHistory(){const q=$('historySearch').value.toLowerCase();$('historyRows').innerHTML=records.filter(r=>(r.name+' '+r.roll+' '+r.session+' '+r.semester).toLowerCase().includes(q)).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.roll)}</td><td>${esc(r.semester)}</td><td>${esc(r.session)}</td><td>${esc(r.date)}</td><td>${esc(r.time)}</td><td>${esc(r.method)}</td></tr>`).join('')||'<tr><td colspan="7">No attendance records.</td></tr>'}
+$('studentSearch').oninput=renderStudents;$('historySearch').oninput=renderHistory;
+function distance(a,b){return Math.sqrt(a.reduce((sum,v,i)=>sum+(v-(b[i]||0))**2,0))}
+function overlay(video,frame,box,el,label,mirror){if(!video.videoWidth||!frame.clientWidth)return;const vw=video.videoWidth,vh=video.videoHeight,cw=frame.clientWidth,ch=frame.clientHeight;const scale=Math.max(cw/vw,ch/vh),cropX=(vw*scale-cw)/2,cropY=(vh*scale-ch)/2;const x=Math.max(0,box.x-box.width*.22),y=Math.max(0,box.y-box.height*.2),right=Math.min(vw,box.x+box.width*1.22),bottom=Math.min(vh,box.y+box.height*1.2);let left=x*scale-cropX,w=(right-x)*scale,h=(bottom-y)*scale,top=y*scale-cropY;if(mirror)left=cw-left-w;el.style.left=Math.max(0,left/cw*100)+'%';el.style.top=Math.max(0,top/ch*100)+'%';el.style.width=Math.min(100,w/cw*100)+'%';el.style.height=Math.min(100,h/ch*100)+'%';el.innerHTML='<span class="face-label">'+esc(label)+'</span>';el.hidden=false}
+async function openCamera(mode,video,frame,empty,button,stopButton){if(!navigator.mediaDevices?.getUserMedia)return toast('Camera requires HTTPS and a supported browser.');try{const constraints={audio:false,video:{width:{ideal:1920},height:{ideal:1080},...(mode==='external'?{}:{facingMode:{ideal:mode}})}};const stream=await navigator.mediaDevices.getUserMedia(constraints);video.srcObject=stream;await video.play();video.hidden=false;empty.hidden=true;frame.classList.toggle('back',mode==='environment');frame.classList.toggle('external',mode==='external');button.disabled=true;stopButton.disabled=false;return stream}catch(e){toast(e.name==='NotAllowedError'?'Camera permission denied. Allow camera access in browser settings.':'Unable to open camera. Check permissions or close other camera apps.');return null}}
+function stop(stream,video,box,empty,button,stopButton){stream?.getTracks().forEach(t=>t.stop());video.srcObject=null;video.hidden=true;box.hidden=true;empty.hidden=false;button.disabled=false;stopButton.disabled=true}
+$('startEnroll').onclick=async()=>{if(!modelReady)return toast('Face recognition models are still loading.');enrollStream=await openCamera($('enrollCamera').value,$('enrollVideo'),$('enrollFrame'),$('enrollEmpty'),$('startEnroll'),$('stopEnroll'));if(enrollStream){enrollLoop=setInterval(async()=>{if(!$('enrollVideo').videoWidth)return;try{const r=await faceapi.detectSingleFace($('enrollVideo'),new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:.5}));if(r)overlay($('enrollVideo'),$('enrollFrame'),r.box,$('enrollBox'),$('studentName').value||'Face detected'+($('studentRoll').value?' · '+$('studentRoll').value:''),$('enrollCamera').value!=='environment');else $('enrollBox').hidden=true}catch{}},250)}};
+function stopEnroll(){if(enrollLoop)clearInterval(enrollLoop);enrollLoop=null;if(enrollStream)stop(enrollStream,$('enrollVideo'),$('enrollBox'),$('enrollEmpty'),$('startEnroll'),$('stopEnroll'));enrollStream=null}
+$('stopEnroll').onclick=stopEnroll;
+$('capture').onclick=async()=>{const v=$('enrollVideo');if(!enrollStream||!v.videoWidth)return toast('Start the camera first.');try{const r=await faceapi.detectSingleFace(v,new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:.55})).withFaceLandmarks().withFaceDescriptor();if(!r)return toast('No clear face found. Center one face and retry.');samples.push(Array.from(r.descriptor));$('sampleCount').textContent=samples.length+'/3 samples';toast('Sample captured: '+samples.length+'/3');if(samples.length>=3)$('capture').disabled=true}catch{toast('Could not capture sample. Try again.')}};
+$('startEnroll').addEventListener('click',()=>{$('capture').disabled=false});
+$('clearSamples').onclick=()=>{samples=[];$('sampleCount').textContent='0/3 samples';$('capture').disabled=!enrollStream};
+$('saveStudent').onclick=()=>{const s={name:$('studentName').value.trim(),roll:$('studentRoll').value.trim(),department:$('studentDept').value.trim(),semester:$('semester').value};if(!s.name||!s.roll||!s.department||!s.semester)return toast('Complete all student details.');if(!$('consent').checked)return toast('Student consent is required.');if(samples.length<3)return toast('Capture three face samples first.');if(students.some(x=>x.roll.toLowerCase()===s.roll.toLowerCase()))return toast('Roll number already exists.');students.unshift({...s,id:crypto.randomUUID(),descriptors:samples,createdAt:new Date().toISOString()});samples=[];save();stopEnroll();['studentName','studentRoll','studentDept','semester'].forEach(id=>$(id).value='');$('consent').checked=false;$('sampleCount').textContent='0/3 samples';$('capture').disabled=true;toast('Student enrolled.');go('students')};
+$('stopEnroll').onclick=stopEnroll;
+$('setSession').onclick=()=>{const n=$('sessionName').value.trim();if(!n)return toast('Enter a session name first.');activeSession=n;$('activeSession').textContent='Active: '+n;toast('Session set: '+n)};
+$('startScan').onclick=async()=>{if(!activeSession)return toast('Set a session name before attendance.');if(!modelReady)return toast('Face recognition models are still loading.');scanStream=await openCamera($('scanCamera').value,$('scanVideo'),$('scanFrame'),$('scanEmpty'),$('startScan'),$('stopScan'));if(!scanStream)return;$('scanStatus').textContent='Scanning for enrolled students…';scanLoop=setInterval(async()=>{const v=$('scanVideo');if(!v.videoWidth)return;try{const r=await faceapi.detectSingleFace(v,new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:.5})).withFaceLandmarks().withFaceDescriptor();if(!r){$('scanBox').hidden=true;return}let best=null;for(const s of students)for(const d of s.descriptors){const score=distance(Array.from(r.descriptor),d);if(!best||score<best.score)best={student:s,score}}const known=best&&best.score<.48,student=known?best.student:null;overlay(v,$('scanFrame'),r.detection.box,$('scanBox'),student?student.name+' · '+student.roll:'Unrecognized face',$('scanCamera').value!=='environment');if(!student){$('scanStatus').textContent='Face detected but not recognized.';return}const duplicate=records.some(x=>x.studentId===student.id&&x.date===today()&&x.session===activeSession);if(duplicate){$('scanStatus').textContent=student.name+' already marked for this session.';return}records.unshift({id:crypto.randomUUID(),studentId:student.id,name:student.name,roll:student.roll,department:student.department,semester:student.semester,session:activeSession,date:today(),time:new Date().toLocaleTimeString(),method:'Face recognition'});save();$('scanStatus').textContent='Attendance marked: '+student.name+' · '+student.roll;renderDashboard()}catch{$('scanStatus').textContent='Could not process camera frame.'}},1400)};
+$('stopScan').onclick=stopScan;
+function stopScan(){if(scanLoop)clearInterval(scanLoop);scanLoop=null;if(scanStream)stop(scanStream,$('scanVideo'),$('scanBox'),$('scanEmpty'),$('startScan'),$('stopScan'));scanStream=null}
+$('espConnect').onclick=async()=>{const base=$('espUrl').value.trim().replace(/\/$/,'');$('espStatus').textContent='Connecting…';try{const r=await fetch(base+'/status',{method:'GET',mode:'cors',signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error();$('espStatus').textContent='Connected';toast('ESP32 status endpoint responded.')}catch{$('espStatus').textContent='Connection failed';toast('Check ESP32 IP, Wi-Fi, endpoint and CORS settings.')}};
+$('exportCsv').onclick=()=>{const cols=['Name','Roll','Department','Semester','Session','Date','Time','Method'];const rows=[cols,...records.map(r=>[r.name,r.roll,r.department,r.semester,r.session,r.date,r.time,r.method])];const csv=rows.map(row=>row.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.href=url;a.download='giftvision-attendance-'+today()+'.csv';a.click();URL.revokeObjectURL(url)};
+async function loadModels(){const state=$('modelState');try{if(!window.faceapi)throw Error('library');const base='https://justadudewhohacks.github.io/face-api.js/models';await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(base),faceapi.nets.faceLandmark68Net.loadFromUri(base),faceapi.nets.faceRecognitionNet.loadFromUri(base)]);modelReady=true;state.textContent='Face recognition ready';state.style.color='#9ee5c5';$('capture').disabled=true}catch{state.textContent='Recognition unavailable — check internet connection';state.style.color='#ffd18a'}}
+loadModels();if(account)renderDashboard();
+})();
+</script>
+</body></html>
